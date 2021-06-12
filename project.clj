@@ -25,7 +25,8 @@
                      [org.slf4j/slf4j-nop "1.7.30"]
                      [nrepl "0.8.3"]
                      [eftest "0.5.9"]
-                     [zookeeper-clj "0.9.4"]]
+                     [zookeeper-clj "0.9.4"]
+                     [fundingcircle/jackdaw "0.6.0"]]
     :resource-paths ["test_resources"]
     :aot            :all}
    :dev

@@ -23,6 +23,14 @@
 (defn data-directory [^TestingServer zookeeper]
   (.getTempDirectory zookeeper))
 
+(defn with-fresh-zookeeper [zookeeper-atom]
+  (fn [run-tests]
+    (try
+      (reset! zookeeper-atom (zookeeper-server))
+      (run-tests)
+      (finally
+        (reset! zookeeper-atom nil)))))
+
 (defn with-running-zookeeper [zookeeper-atom]
   (fn [run-tests]
     (try
