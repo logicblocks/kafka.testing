@@ -16,12 +16,14 @@
             [lein-bikeshed "0.5.2"]
             [jonase/eastwood "0.3.11"]]
 
-  :dependencies [[org.apache.curator/curator-test "5.1.0"]]
+  :dependencies [[org.apache.curator/curator-test "5.1.0"]
+                 [org.apache.kafka/kafka_2.13 "2.8.0"]]
 
   :profiles
   {:shared
-   {:dependencies   [[org.clojure/clojure "1.10.1"]
-                     [nrepl "0.7.0"]
+   {:dependencies   [[org.clojure/clojure "1.10.3"]
+                     [org.slf4j/slf4j-nop "1.7.30"]
+                     [nrepl "0.8.3"]
                      [eftest "0.5.9"]
                      [zookeeper-clj "0.9.4"]]
     :resource-paths ["test_resources"]
