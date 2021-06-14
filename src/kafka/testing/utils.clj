@@ -27,10 +27,10 @@
         (delete-directory! child)))
     (io/delete-file file)))
 
-(defn properties [map]
+(defn properties [m]
   (reduce
     (fn [^Properties properties [key value]]
       (doto properties
         (.put (name key) (str value))))
     (Properties.)
-    (seq map)))
+    (seq m)))
