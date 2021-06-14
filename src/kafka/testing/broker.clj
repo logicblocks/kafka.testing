@@ -68,12 +68,11 @@
     (tu/delete-directory! (log-directory broker))
     broker))
 
-(defn with-fresh-kafka-broker [kafka-broker-atom zookeeper-connect-string]
+(defn with-fresh-kafka-broker [kafka-broker-atom & options]
   (fn [run-tests]
     (try
       (reset! kafka-broker-atom
-              (kafka-broker
-                :zookeeper-connect-string zookeeper-connect-string))
+              (apply kafka-broker options))
       (run-tests)
       (finally
         (reset! kafka-broker-atom nil)))))

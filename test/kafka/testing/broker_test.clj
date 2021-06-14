@@ -1,14 +1,16 @@
 (ns kafka.testing.broker-test
   (:require
-   [clojure.test :refer :all]
+    [clojure.test :refer :all]
 
-   [jackdaw.admin :as ka]
+    [jackdaw.admin :as ka]
 
-   [kafka.testing.utils :as tu]
-   [kafka.testing.zookeeper :as tzk]
-   [kafka.testing.broker :as tkb]
-   [kafka.testing.test-utils :as ttu])
-  (:import [org.apache.kafka.common.errors TimeoutException]))
+    [kafka.testing.utils :as tu]
+    [kafka.testing.zookeeper :as tzk]
+    [kafka.testing.broker :as tkb]
+    [kafka.testing.test-utils :as ttu])
+  (:import
+    [org.apache.kafka.common.errors TimeoutException]
+    [kafka.server KafkaServer]))
 
 (def zookeeper-atom (atom nil))
 
@@ -96,6 +98,37 @@
     (is (false? (ttu/path-exists? log-directory)))
     (is (instance? TimeoutException connect-result))))
 
+(deftest with-fresh-kafka-broker-instantiates-new-kafka-broker
+  (let [zookeeper (deref zookeeper-atom)
+        broker-atom (atom nil)
+        instantiation-fn
+        (tkb/with-fresh-kafka-broker broker-atom
+          :zookeeper-connect-string (tzk/connect-string zookeeper))
+
+        instance-before-invocations (atom nil)
+        instance-during-first-invocation (atom nil)
+        instance-after-first-invocation (atom nil)
+        instance-during-second-invocation (atom nil)
+        instance-after-second-invocation (atom nil)]
+    (reset! instance-before-invocations @broker-atom)
+    (instantiation-fn
+      (fn []
+        (reset! instance-during-first-invocation @broker-atom)))
+    (reset! instance-after-first-invocation @broker-atom)
+    (instantiation-fn
+      (fn []
+        (reset! instance-during-second-invocation @broker-atom)))
+    (reset! instance-after-second-invocation @broker-atom)
+
+    (is (nil? @instance-before-invocations))
+    (is (instance? KafkaServer @instance-during-first-invocation))
+    (is (nil? @instance-after-first-invocation))
+    (is (instance? KafkaServer @instance-during-second-invocation))
+    (is (nil? @instance-after-second-invocation))
+    (is (not (=
+               @instance-after-first-invocation
+               @instance-during-second-invocation)))))
+
 (deftest with-running-kafka-broker-manages-kafka-broker-lifecycle
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
@@ -113,9 +146,9 @@
         _ (lifecycle-fn
             (fn []
               (reset! log-directory-exists-during-atom
-                      (ttu/path-exists? log-directory))
+                (ttu/path-exists? log-directory))
               (reset! connect-result-during-atom
-                      (try-connect bootstrap-servers))))
+                (try-connect bootstrap-servers))))
         connect-result-during (deref connect-result-during-atom)
         log-directory-exists-during (deref log-directory-exists-during-atom)
 

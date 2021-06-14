@@ -1,11 +1,12 @@
 (ns kafka.testing.zookeeper-test
   (:require
-   [clojure.test :refer :all]
+    [clojure.test :refer :all]
 
-   [zookeeper :as zk]
+    [zookeeper :as zk]
 
-   [kafka.testing.zookeeper :as tzk]
-   [kafka.testing.test-utils :as tu]))
+    [kafka.testing.zookeeper :as tzk]
+    [kafka.testing.test-utils :as tu])
+  (:import (org.apache.curator.test TestingServer)))
 
 (defn try-connect [connect-string]
   (try
@@ -45,6 +46,33 @@
     (is (false? (tu/path-exists? data-directory)))
     (is (instance? IllegalStateException connect-result))))
 
+(deftest with-fresh-zookeeper-instantiates-new-zookeeper
+  (let [zookeeper-atom (atom nil)
+        instantiation-fn (tzk/with-fresh-zookeeper zookeeper-atom)
+
+        instance-before-invocations (atom nil)
+        instance-during-first-invocation (atom nil)
+        instance-after-first-invocation (atom nil)
+        instance-during-second-invocation (atom nil)
+        instance-after-second-invocation (atom nil)]
+    (reset! instance-before-invocations @zookeeper-atom)
+    (instantiation-fn
+      (fn []
+        (reset! instance-during-first-invocation @zookeeper-atom)))
+    (reset! instance-after-first-invocation @zookeeper-atom)
+    (instantiation-fn
+        (fn []
+          (reset! instance-during-second-invocation @zookeeper-atom)))
+    (reset! instance-after-second-invocation @zookeeper-atom)
+
+    (is (nil? @instance-before-invocations))
+    (is (instance? TestingServer @instance-during-first-invocation))
+    (is (nil? @instance-after-first-invocation))
+    (is (instance? TestingServer @instance-during-second-invocation))
+    (is (nil? @instance-after-second-invocation))
+    (is (not (= @instance-after-first-invocation
+                @instance-during-second-invocation)))))
+
 (deftest with-running-zookeeper-manages-zookeeper-lifecycle
   (let [zookeeper (tzk/zookeeper-server)
         zookeeper-atom (atom zookeeper)
@@ -60,9 +88,9 @@
         _ (lifecycle-fn
             (fn []
               (reset! data-directory-exists-during-atom
-                (tu/path-exists? data-directory))
+                      (tu/path-exists? data-directory))
               (reset! connect-result-during-atom
-                (try-connect connect-string))))
+                      (try-connect connect-string))))
         connect-result-during (deref connect-result-during-atom)
         data-directory-exists-during (deref data-directory-exists-during-atom)
 
