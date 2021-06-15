@@ -2,6 +2,7 @@
   (:require
    [clojure.test :refer :all]
 
+   [kafka.testing.logging]
    [kafka.testing.utils :as tu]
    [kafka.testing.zookeeper :as tzk]
    [kafka.testing.broker :as tkb]

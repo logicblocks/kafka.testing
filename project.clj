@@ -24,9 +24,15 @@
   :profiles
   {:shared
    {:dependencies   [[org.clojure/clojure "1.10.3"]
-                     [org.slf4j/slf4j-nop "1.7.30"]
+
+                     [org.slf4j/jcl-over-slf4j "1.7.30"]
+                     [org.slf4j/jul-to-slf4j "1.7.30"]
+                     [org.slf4j/log4j-over-slf4j "1.7.30"]
+                     [ch.qos.logback/logback-classic "1.2.3"]
+
                      [nrepl "0.8.3"]
                      [eftest "0.5.9"]
+
                      [zookeeper-clj "0.9.4"]
                      [fundingcircle/jackdaw "0.6.0"]
                      [org.sourcelab/kafka-connect-client "3.1.1"]]

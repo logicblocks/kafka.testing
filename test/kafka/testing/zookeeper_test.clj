@@ -4,6 +4,7 @@
 
    [zookeeper :as zk]
 
+   [kafka.testing.logging]
    [kafka.testing.zookeeper :as tzk]
    [kafka.testing.test-utils :as tu]))
 
