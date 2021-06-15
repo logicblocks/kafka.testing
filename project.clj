@@ -17,7 +17,9 @@
             [jonase/eastwood "0.3.11"]]
 
   :dependencies [[org.apache.curator/curator-test "5.1.0"]
-                 [org.apache.kafka/kafka_2.13 "2.8.0"]]
+                 [org.apache.kafka/kafka_2.13 "2.8.0"]
+                 [org.apache.kafka/connect-runtime "2.8.0"
+                  :exclusions [org.slf4j/slf4j-log4j12]]]
 
   :profiles
   {:shared
@@ -26,7 +28,8 @@
                      [nrepl "0.8.3"]
                      [eftest "0.5.9"]
                      [zookeeper-clj "0.9.4"]
-                     [fundingcircle/jackdaw "0.6.0"]]
+                     [fundingcircle/jackdaw "0.6.0"]
+                     [org.sourcelab/kafka-connect-client "3.1.1"]]
     :resource-paths ["test_resources"]
     :aot            :all}
    :dev

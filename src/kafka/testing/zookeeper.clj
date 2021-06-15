@@ -3,25 +3,27 @@
    [org.apache.curator.test TestingServer]))
 
 (defn zookeeper-server
-  ([] (TestingServer. false))
-  ([& {:keys [^Integer port]}] (TestingServer. port false)))
+  ([]
+   {::instance (TestingServer. false)})
+  ([& {:keys [^Integer port]}]
+   {::instance (TestingServer. port false)}))
 
-(defn start [^TestingServer zookeeper]
-  (doto zookeeper
-    (.start)))
+(defn start [zookeeper]
+  (.start (::instance zookeeper))
+  zookeeper)
 
-(defn stop [^TestingServer zookeeper]
-  (doto zookeeper
-    (.close)))
+(defn stop [zookeeper]
+  (.close (::instance zookeeper))
+  zookeeper)
 
-(defn port [^TestingServer zookeeper]
-  (.getPort zookeeper))
+(defn port [zookeeper]
+  (.getPort (::instance zookeeper)))
 
-(defn connect-string [^TestingServer zookeeper]
-  (.getConnectString zookeeper))
+(defn connect-string [zookeeper]
+  (.getConnectString (::instance zookeeper)))
 
-(defn data-directory [^TestingServer zookeeper]
-  (.getTempDirectory zookeeper))
+(defn data-directory [zookeeper]
+  (.getTempDirectory (::instance zookeeper)))
 
 (defn with-fresh-zookeeper [zookeeper-atom]
   (fn [run-tests]

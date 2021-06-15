@@ -1,12 +1,11 @@
 (ns kafka.testing.utils
   (:require
-    [clojure.java.io :as io])
+   [clojure.java.io :as io])
   (:import
-    [java.net ServerSocket]
-    [java.util Properties UUID]
-    [java.nio.file Files]
-    [java.nio.file.attribute FileAttribute]
-    [java.io File]))
+   [java.net ServerSocket]
+   [java.util Properties UUID]
+   [java.nio.file Files]
+   [java.nio.file.attribute FileAttribute]))
 
 (defn free-port! []
   (with-open [socket (ServerSocket. 0)]
@@ -15,7 +14,7 @@
 (defn temporary-directory! []
   (->
     (Files/createTempDirectory
-      (.toString (UUID/randomUUID))
+      (str (UUID/randomUUID))
       (into-array FileAttribute []))
     (.toAbsolutePath)
     (.toString)))

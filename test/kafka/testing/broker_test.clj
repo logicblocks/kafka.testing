@@ -1,27 +1,26 @@
 (ns kafka.testing.broker-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [jackdaw.admin :as ka]
+   [jackdaw.admin :as ka]
 
-    [kafka.testing.utils :as tu]
-    [kafka.testing.zookeeper :as tzk]
-    [kafka.testing.broker :as tkb]
-    [kafka.testing.test-utils :as ttu])
+   [kafka.testing.utils :as tu]
+   [kafka.testing.zookeeper :as tzk]
+   [kafka.testing.broker :as tkb]
+   [kafka.testing.test-utils :as ttu])
   (:import
-    [org.apache.kafka.common.errors TimeoutException]
-    [kafka.server KafkaServer]))
-
-(def zookeeper-atom (atom nil))
+   [org.apache.kafka.common.errors TimeoutException]))
 
 (defn try-connect [bootstrap-servers]
   (try
     (with-open [client (ka/->AdminClient
                          {"bootstrap.servers"      bootstrap-servers
-                          "request.timeout.ms"     "200"
-                          "default.api.timeout.ms" "200"})]
+                          "request.timeout.ms"     "250"
+                          "default.api.timeout.ms" "250"})]
       (ka/describe-cluster client))
     (catch Exception e (.getCause e))))
+
+(def zookeeper-atom (atom nil))
 
 (use-fixtures :each
   (tzk/with-fresh-zookeeper zookeeper-atom)
@@ -99,11 +98,9 @@
     (is (instance? TimeoutException connect-result))))
 
 (deftest with-fresh-kafka-broker-instantiates-new-kafka-broker
-  (let [zookeeper (deref zookeeper-atom)
-        broker-atom (atom nil)
+  (let [broker-atom (atom nil)
         instantiation-fn
-        (tkb/with-fresh-kafka-broker broker-atom
-          :zookeeper-connect-string (tzk/connect-string zookeeper))
+        (tkb/with-fresh-kafka-broker broker-atom zookeeper-atom)
 
         instance-before-invocations (atom nil)
         instance-during-first-invocation (atom nil)
@@ -121,9 +118,9 @@
     (reset! instance-after-second-invocation @broker-atom)
 
     (is (nil? @instance-before-invocations))
-    (is (instance? KafkaServer @instance-during-first-invocation))
+    (is (not (nil? @instance-during-first-invocation)))
     (is (nil? @instance-after-first-invocation))
-    (is (instance? KafkaServer @instance-during-second-invocation))
+    (is (not (nil? @instance-during-second-invocation)))
     (is (nil? @instance-after-second-invocation))
     (is (not (=
                @instance-after-first-invocation
