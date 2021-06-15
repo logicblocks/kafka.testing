@@ -12,7 +12,8 @@
    [org.sourcelab.kafka.connect.apiclient
     Configuration
     KafkaConnectClient]
-   [org.sourcelab.kafka.connect.apiclient.rest.exceptions ConnectionException]))
+   [org.sourcelab.kafka.connect.apiclient.rest.exceptions
+    ConnectionException]))
 
 (defn try-connect [rest-url]
   (try
@@ -107,3 +108,61 @@
         admin-url (tkc/admin-url kafka-connect-server)
         connect-result (try-connect admin-url)]
     (is (instance? ConnectionException connect-result))))
+
+(deftest with-fresh-kafka-connect-server-instantiates-new-kafka-connect-server
+  (let [kafka-connect-atom (atom nil)
+        instantiation-fn
+        (tkc/with-fresh-kafka-connect-server
+          kafka-connect-atom kafka-broker-atom)
+
+        instance-before-invocations (atom nil)
+        instance-during-first-invocation (atom nil)
+        instance-after-first-invocation (atom nil)
+        instance-during-second-invocation (atom nil)
+        instance-after-second-invocation (atom nil)]
+    (reset! instance-before-invocations @kafka-connect-atom)
+    (instantiation-fn
+      (fn []
+        (reset! instance-during-first-invocation @kafka-connect-atom)))
+    (reset! instance-after-first-invocation @kafka-connect-atom)
+    (instantiation-fn
+      (fn []
+        (reset! instance-during-second-invocation @kafka-connect-atom)))
+    (reset! instance-after-second-invocation @kafka-connect-atom)
+
+    (is (nil? @instance-before-invocations))
+    (is (not (nil? @instance-during-first-invocation)))
+    (is (nil? @instance-after-first-invocation))
+    (is (not (nil? @instance-during-second-invocation)))
+    (is (nil? @instance-after-second-invocation))
+    (is (not (= @instance-after-first-invocation
+               @instance-during-second-invocation)))))
+
+; TODO: Test offset file deletion. Currently, the offset file isn't created
+;       until needed so hard to test.
+(deftest with-running-kafka-connect-server-manages-kafka-connect-server-lifecycle
+  (let [broker (deref kafka-broker-atom)
+        connect-server (tkc/kafka-connect-server
+                         :bootstrap-servers (tkb/bootstrap-servers broker))
+        connect-server-atom (atom connect-server)
+
+        lifecycle-fn (tkc/with-running-kafka-connect-server
+                       connect-server-atom)
+
+        admin-url (tkc/admin-url connect-server)
+
+        connect-result-before (try-connect admin-url)
+
+        connect-result-during-atom (atom nil)
+        _ (lifecycle-fn
+            (fn []
+              (reset! connect-result-during-atom
+                (try-connect admin-url))))
+        connect-result-during (deref connect-result-during-atom)
+
+        connect-result-after (try-connect admin-url)]
+    (is (instance? ConnectionException connect-result-before))
+
+    (is (not (instance? ConnectionException connect-result-during)))
+
+    (is (instance? ConnectionException connect-result-after))))

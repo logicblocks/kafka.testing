@@ -1,6 +1,7 @@
 (ns kafka.testing.connect
   (:require
-   [kafka.testing.utils :as tu])
+   [kafka.testing.utils :as tu]
+   [kafka.testing.broker :as tkb])
   (:import
    [org.apache.kafka.connect.runtime
     Connect
@@ -13,23 +14,33 @@
    [org.apache.kafka.common.utils Time]
    [org.apache.kafka.connect.connector.policy
     NoneConnectorClientConfigOverridePolicy]
-   [org.apache.kafka.connect.storage MemoryOffsetBackingStore]
+   [org.apache.kafka.connect.storage FileOffsetBackingStore]
    [org.apache.kafka.connect.util ConnectUtils]
-   [java.io File]))
+   [java.io File]
+   [java.util UUID]))
+
+(def rest-host-name-key "rest.host.name")
+(def rest-port-key "rest.port")
+(def bootstrap-servers-key "bootstrap.servers")
+(def key-converter-key "key.converter")
+(def value-converter-key "value.converter")
+(def offset-storage-file-filename-key "offset.storage.file.filename")
+
+(def json-converter-classname "org.apache.kafka.connect.json.JsonConverter")
 
 (def ^:private option-config-keys
-  {:hostname            "rest.host.name"
-   :port                "rest.port"
-   :bootstrap-servers   "bootstrap.servers"
-   :key-converter       "key.converter"
-   :value-converter     "value.converter"
-   :offset-storage-file "offset.storage.file.filename"})
+  {:hostname            rest-host-name-key
+   :port                rest-port-key
+   :bootstrap-servers   bootstrap-servers-key
+   :key-converter       key-converter-key
+   :value-converter     value-converter-key
+   :offset-storage-file offset-storage-file-filename-key})
 
 (defn- option-defaults []
   (let [hostname "localhost"
         port (tu/free-port!)
-        key-converter "org.apache.kafka.connect.json.JsonConverter"
-        value-converter "org.apache.kafka.connect.json.JsonConverter"
+        key-converter json-converter-classname
+        value-converter json-converter-classname
         offset-storage-file-filename
         (str (tu/temporary-directory!) File/separator "offsets")]
     {:hostname            hostname
@@ -51,31 +62,49 @@
 (defn- worker-config [config-map]
   (StandaloneConfig. config-map))
 
+(defn- worker-id [config-map]
+  (str (UUID/randomUUID) (get config-map rest-port-key)))
+
+(defn- kafka-cluster-id [config-map]
+  (ConnectUtils/lookupKafkaClusterId (worker-config config-map)))
+
+(defn- rest-server [config-map]
+  (RestServer. (worker-config config-map)))
+
+(defn- plugins [config-map]
+  (Plugins. config-map))
+
+(defn- offset-backing-store [_]
+  (FileOffsetBackingStore.))
+
+(defn- connector-client-config-override-policy [_]
+  (NoneConnectorClientConfigOverridePolicy.))
+
+(defn- worker [config-map plugins]
+  (Worker.
+    (worker-id config-map)
+    Time/SYSTEM
+    plugins
+    (worker-config config-map)
+    (offset-backing-store config-map)
+    (connector-client-config-override-policy config-map)))
+
+(defn- herder [config-map worker]
+  (StandaloneHerder.
+    worker
+    (kafka-cluster-id config-map)
+    (connector-client-config-override-policy config-map)))
+
+(defn- connect [_ herder rest-server]
+  (Connect. herder rest-server))
+
 (defn kafka-connect-server [& {:as options}]
   (let [config-map (config-map options)
-        worker-config (worker-config config-map)
-        kafka-cluster-id (ConnectUtils/lookupKafkaClusterId worker-config)
-        rest-server (RestServer. worker-config)
-        rest-advertised-url (.advertisedUrl rest-server)
-        worker-id (str (.getHost rest-advertised-url) ":"
-                    (.getPort rest-advertised-url))
-        plugins (Plugins. config-map)
-        offset-backing-store
-        (MemoryOffsetBackingStore.)
-        connector-client-config-override-policy
-        (NoneConnectorClientConfigOverridePolicy.)
-        worker (Worker.
-                 worker-id
-                 Time/SYSTEM
-                 plugins
-                 worker-config
-                 offset-backing-store
-                 connector-client-config-override-policy)
-        herder (StandaloneHerder.
-                 worker
-                 kafka-cluster-id
-                 connector-client-config-override-policy)
-        connect (Connect. herder rest-server)]
+        rest-server (rest-server config-map)
+        plugins (plugins config-map)
+        worker (worker config-map plugins)
+        herder (herder config-map worker)
+        connect (connect config-map herder rest-server)]
     {::instances {::connect     connect
                   ::rest-server rest-server
                   ::plugins     plugins
@@ -84,19 +113,19 @@
      ::config    config-map}))
 
 (defn hostname [kafka-connect-server]
-  (get-in kafka-connect-server [::config "rest.host.name"]))
+  (get-in kafka-connect-server [::config rest-host-name-key]))
 
 (defn port [kafka-connect-server]
-  (get-in kafka-connect-server [::config "rest.port"]))
+  (get-in kafka-connect-server [::config rest-port-key]))
 
 (defn admin-url [kafka-connect-server]
   (let [config (::config kafka-connect-server)
-        hostname (get config "rest.host.name")
-        port (get config "rest.port")]
+        hostname (get config rest-host-name-key)
+        port (get config rest-port-key)]
     (str "http://" hostname ":" port "/")))
 
 (defn offset-storage-file [kafka-connect-server]
-  (get-in kafka-connect-server [::config "offset.storage.file.filename"]))
+  (get-in kafka-connect-server [::config offset-storage-file-filename-key]))
 
 (defn start [kafka-connect-server]
   (.compareAndSwapWithDelegatingLoader
@@ -112,3 +141,27 @@
     (.stop connect)
     (.awaitStop connect))
   kafka-connect-server)
+
+(defn with-fresh-kafka-connect-server
+  [kafka-connect-server-atom kafka-broker-atom & options]
+  (fn [run-tests]
+    (try
+      (reset! kafka-connect-server-atom
+        (apply kafka-connect-server
+          (concat
+            [:bootstrap-servers
+             (tkb/bootstrap-servers @kafka-broker-atom)]
+            options)))
+      (run-tests)
+      (finally
+        (reset! kafka-connect-server-atom nil)))))
+
+(defn with-running-kafka-connect-server [kafka-connect-server-atom]
+  (fn [run-tests]
+    (try
+      (reset! kafka-connect-server-atom
+        (start @kafka-connect-server-atom))
+      (run-tests)
+      (finally
+        (reset! kafka-connect-server-atom
+          (stop @kafka-connect-server-atom))))))
