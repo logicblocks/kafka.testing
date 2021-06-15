@@ -2,16 +2,9 @@
   (:require
    [clojure.test :refer :all]
 
-   [zookeeper :as zk]
-
    [kafka.testing.logging]
    [kafka.testing.zookeeper :as tzk]
    [kafka.testing.test-utils :as tu]))
-
-(defn try-connect [connect-string]
-  (try
-    (zk/connect connect-string :timeout-msec 50)
-    (catch IllegalStateException e e)))
 
 (deftest zookeeper-server-uses-a-random-port
   (let [zookeeper (tzk/zookeeper-server)]
@@ -24,7 +17,7 @@
 (deftest zookeeper-server-does-not-start-the-server
   (let [zookeeper (tzk/zookeeper-server)
         connect-string (tzk/connect-string zookeeper)
-        connect-result (try-connect connect-string)]
+        connect-result (tu/try-connecting-to-zookeeper connect-string)]
     (is (instance? IllegalStateException connect-result))))
 
 (deftest start-starts-the-provided-zookeeper-server
@@ -32,7 +25,7 @@
         zookeeper (tzk/start zookeeper)
         data-directory (tzk/data-directory zookeeper)
         connect-string (tzk/connect-string zookeeper)
-        connect-result (try-connect connect-string)]
+        connect-result (tu/try-connecting-to-zookeeper connect-string)]
     (is (true? (tu/path-exists? data-directory)))
     (is (not (instance? IllegalStateException connect-result)))))
 
@@ -42,7 +35,7 @@
         zookeeper (tzk/stop zookeeper)
         data-directory (tzk/data-directory zookeeper)
         connect-string (tzk/connect-string zookeeper)
-        connect-result (try-connect connect-string)]
+        connect-result (tu/try-connecting-to-zookeeper connect-string)]
     (is (false? (tu/path-exists? data-directory)))
     (is (instance? IllegalStateException connect-result))))
 
@@ -80,7 +73,7 @@
         connect-string (tzk/connect-string zookeeper)
         data-directory (tzk/data-directory zookeeper)
 
-        connect-result-before (try-connect connect-string)
+        connect-result-before (tu/try-connecting-to-zookeeper connect-string)
         data-directory-exists-before (tu/path-exists? data-directory)
 
         connect-result-during-atom (atom nil)
@@ -90,11 +83,11 @@
               (reset! data-directory-exists-during-atom
                 (tu/path-exists? data-directory))
               (reset! connect-result-during-atom
-                (try-connect connect-string))))
+                (tu/try-connecting-to-zookeeper connect-string))))
         connect-result-during (deref connect-result-during-atom)
         data-directory-exists-during (deref data-directory-exists-during-atom)
 
-        connect-result-after (try-connect connect-string)
+        connect-result-after (tu/try-connecting-to-zookeeper connect-string)
         data-directory-exists-after (tu/path-exists? data-directory)]
     (is (instance? IllegalStateException connect-result-before))
     (is (true? data-directory-exists-before))

@@ -7,6 +7,10 @@
    [org.apache.kafka.common.utils Time]
    [scala Option]))
 
+(defmacro ^:private do-if-instance [kafka-broker & body]
+  `(when (and ~kafka-broker (::instance ~kafka-broker))
+     ~@body))
+
 (def ^:private option-config-keys
   {:hostname                 "host.name"
    :log-directory            "log.dirs"
@@ -42,32 +46,38 @@
      ::config   config-map}))
 
 (defn hostname [kafka-broker]
-  (-> (::instance kafka-broker)
-    (.config)
-    (.hostName)))
+  (do-if-instance kafka-broker
+    (-> (::instance kafka-broker)
+      (.config)
+      (.hostName))))
 
 (defn port [kafka-broker]
-  (-> (::instance kafka-broker)
-    (.config)
-    (.port)))
+  (do-if-instance kafka-broker
+    (-> (::instance kafka-broker)
+      (.config)
+      (.port))))
 
 (defn log-directory [kafka-broker]
-  (-> (::instance kafka-broker)
-    (.config)
-    (.logDirs)
-    (.head)))
+  (do-if-instance kafka-broker
+    (-> (::instance kafka-broker)
+      (.config)
+      (.logDirs)
+      (.head))))
 
 (defn bootstrap-servers [kafka-broker]
-  (str (hostname kafka-broker) ":" (port kafka-broker)))
+  (do-if-instance kafka-broker
+    (str (hostname kafka-broker) ":" (port kafka-broker))))
 
 (defn start [kafka-broker]
-  (.startup (::instance kafka-broker))
+  (do-if-instance kafka-broker
+    (.startup (::instance kafka-broker)))
   kafka-broker)
 
 (defn stop [kafka-broker]
-  (.shutdown (::instance kafka-broker))
-  (.awaitShutdown (::instance kafka-broker))
-  (tu/delete-directory! (log-directory kafka-broker))
+  (do-if-instance kafka-broker
+    (.shutdown (::instance kafka-broker))
+    (.awaitShutdown (::instance kafka-broker))
+    (tu/delete-directory! (log-directory kafka-broker)))
   kafka-broker)
 
 (defn with-fresh-kafka-broker [kafka-broker-atom zookeeper-atom & options]

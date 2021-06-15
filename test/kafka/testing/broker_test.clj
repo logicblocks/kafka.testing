@@ -2,8 +2,6 @@
   (:require
    [clojure.test :refer :all]
 
-   [jackdaw.admin :as ka]
-
    [kafka.testing.logging]
    [kafka.testing.utils :as tu]
    [kafka.testing.zookeeper :as tzk]
@@ -11,15 +9,6 @@
    [kafka.testing.test-utils :as ttu])
   (:import
    [org.apache.kafka.common.errors TimeoutException]))
-
-(defn try-connect [bootstrap-servers]
-  (try
-    (with-open [client (ka/->AdminClient
-                         {"bootstrap.servers"      bootstrap-servers
-                          "request.timeout.ms"     "250"
-                          "default.api.timeout.ms" "250"})]
-      (ka/describe-cluster client))
-    (catch Exception e (.getCause e))))
 
 (def zookeeper-atom (atom nil))
 
@@ -72,7 +61,7 @@
         broker (tkb/kafka-broker
                  :zookeeper-connect-string (tzk/connect-string zookeeper))
         bootstrap-servers (tkb/bootstrap-servers broker)
-        connect-result (try-connect bootstrap-servers)]
+        connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (instance? TimeoutException connect-result))))
 
 (deftest start-starts-the-provided-kafka-broker
@@ -82,7 +71,7 @@
         broker (tkb/start broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
         log-directory (tkb/log-directory broker)
-        connect-result (try-connect bootstrap-servers)]
+        connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (true? (ttu/path-exists? log-directory)))
     (is (not (instance? TimeoutException connect-result)))))
 
@@ -94,7 +83,7 @@
         broker (tkb/stop broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
         log-directory (tkb/log-directory broker)
-        connect-result (try-connect bootstrap-servers)]
+        connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (false? (ttu/path-exists? log-directory)))
     (is (instance? TimeoutException connect-result))))
 
@@ -136,7 +125,8 @@
         bootstrap-servers (tkb/bootstrap-servers broker)
         log-directory (tkb/log-directory broker)
 
-        connect-result-before (try-connect bootstrap-servers)
+        connect-result-before
+        (ttu/try-connecting-to-kafka-broker bootstrap-servers)
         log-directory-exists-before (ttu/path-exists? log-directory)
 
         connect-result-during-atom (atom nil)
@@ -146,11 +136,12 @@
               (reset! log-directory-exists-during-atom
                 (ttu/path-exists? log-directory))
               (reset! connect-result-during-atom
-                (try-connect bootstrap-servers))))
+                (ttu/try-connecting-to-kafka-broker bootstrap-servers))))
         connect-result-during (deref connect-result-during-atom)
         log-directory-exists-during (deref log-directory-exists-during-atom)
 
-        connect-result-after (try-connect bootstrap-servers)
+        connect-result-after
+        (ttu/try-connecting-to-kafka-broker bootstrap-servers)
         log-directory-exists-after (ttu/path-exists? log-directory)]
     (is (instance? TimeoutException connect-result-before))
     (is (true? log-directory-exists-before))

@@ -15,9 +15,17 @@
    [org.apache.kafka.connect.connector.policy
     NoneConnectorClientConfigOverridePolicy]
    [org.apache.kafka.connect.storage FileOffsetBackingStore]
-   [org.apache.kafka.connect.util ConnectUtils]
    [java.io File]
-   [java.util UUID]))
+   [java.util UUID]
+   [org.apache.kafka.connect.util ConnectUtils]))
+
+(defmacro ^:private do-if-instance [kafka-connect-server & body]
+  `(when (and ~kafka-connect-server
+           (get-in ~kafka-connect-server [::instances ::plugins])
+           (get-in ~kafka-connect-server [::instances ::rest-server])
+           (get-in ~kafka-connect-server [::instances ::connect])
+           (get-in ~kafka-connect-server [::config]))
+     ~@body))
 
 (def rest-host-name-key "rest.host.name")
 (def rest-port-key "rest.port")
@@ -113,33 +121,39 @@
      ::config    config-map}))
 
 (defn hostname [kafka-connect-server]
-  (get-in kafka-connect-server [::config rest-host-name-key]))
+  (do-if-instance kafka-connect-server
+    (get-in kafka-connect-server [::config rest-host-name-key])))
 
 (defn port [kafka-connect-server]
-  (get-in kafka-connect-server [::config rest-port-key]))
+  (do-if-instance kafka-connect-server
+    (get-in kafka-connect-server [::config rest-port-key])))
 
 (defn admin-url [kafka-connect-server]
-  (let [config (::config kafka-connect-server)
-        hostname (get config rest-host-name-key)
-        port (get config rest-port-key)]
-    (str "http://" hostname ":" port "/")))
+  (do-if-instance kafka-connect-server
+    (let [config (::config kafka-connect-server)
+          hostname (get config rest-host-name-key)
+          port (get config rest-port-key)]
+      (str "http://" hostname ":" port "/"))))
 
 (defn offset-storage-file [kafka-connect-server]
-  (get-in kafka-connect-server [::config offset-storage-file-filename-key]))
+  (do-if-instance kafka-connect-server
+    (get-in kafka-connect-server [::config offset-storage-file-filename-key])))
 
 (defn start [kafka-connect-server]
-  (.compareAndSwapWithDelegatingLoader
-    (get-in kafka-connect-server [::instances ::plugins]))
-  (.initializeServer
-    (get-in kafka-connect-server [::instances ::rest-server]))
-  (.start
-    (get-in kafka-connect-server [::instances ::connect]))
+  (do-if-instance kafka-connect-server
+    (.compareAndSwapWithDelegatingLoader
+      (get-in kafka-connect-server [::instances ::plugins]))
+    (.initializeServer
+      (get-in kafka-connect-server [::instances ::rest-server]))
+    (.start
+      (get-in kafka-connect-server [::instances ::connect])))
   kafka-connect-server)
 
 (defn stop [kafka-connect-server]
-  (let [^Connect connect (get-in kafka-connect-server [::instances ::connect])]
-    (.stop connect)
-    (.awaitStop connect))
+  (do-if-instance kafka-connect-server
+    (let [^Connect connect (get-in kafka-connect-server [::instances ::connect])]
+      (.stop connect)
+      (.awaitStop connect)))
   kafka-connect-server)
 
 (defn with-fresh-kafka-connect-server

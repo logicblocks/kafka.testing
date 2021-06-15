@@ -9,18 +9,8 @@
    [kafka.testing.connect :as tkc]
    [kafka.testing.test-utils :as ttu])
   (:import
-   [org.sourcelab.kafka.connect.apiclient
-    Configuration
-    KafkaConnectClient]
    [org.sourcelab.kafka.connect.apiclient.rest.exceptions
     ConnectionException]))
-
-(defn try-connect [rest-url]
-  (try
-    (let [configuration (Configuration. rest-url)
-          client (KafkaConnectClient. configuration)]
-      (.getConnectServerVersion client))
-    (catch Exception e e)))
 
 (def zookeeper-atom (atom nil))
 (def kafka-broker-atom (atom nil))
@@ -85,7 +75,7 @@
         kafka-connect-server (tkc/kafka-connect-server
                                :bootstrap-servers bootstrap-servers)
         admin-url (tkc/admin-url kafka-connect-server)
-        connect-result (try-connect admin-url)]
+        connect-result (ttu/try-connecting-to-kafka-connect admin-url)]
     (is (instance? ConnectionException connect-result))))
 
 (deftest start-starts-the-provided-kafka-connect-server
@@ -95,7 +85,7 @@
                                :bootstrap-servers bootstrap-servers)
         kafka-connect-server (tkc/start kafka-connect-server)
         admin-url (tkc/admin-url kafka-connect-server)
-        connect-result (try-connect admin-url)]
+        connect-result (ttu/try-connecting-to-kafka-connect admin-url)]
     (is (not (instance? ConnectionException connect-result)))))
 
 (deftest stop-stops-the-provided-kafka-connect-server
@@ -106,7 +96,7 @@
         kafka-connect-server (tkc/start kafka-connect-server)
         kafka-connect-server (tkc/stop kafka-connect-server)
         admin-url (tkc/admin-url kafka-connect-server)
-        connect-result (try-connect admin-url)]
+        connect-result (ttu/try-connecting-to-kafka-connect admin-url)]
     (is (instance? ConnectionException connect-result))))
 
 (deftest with-fresh-kafka-connect-server-instantiates-new-kafka-connect-server
@@ -152,16 +142,16 @@
 
         admin-url (tkc/admin-url connect-server)
 
-        connect-result-before (try-connect admin-url)
+        connect-result-before (ttu/try-connecting-to-kafka-connect admin-url)
 
         connect-result-during-atom (atom nil)
         _ (lifecycle-fn
             (fn []
               (reset! connect-result-during-atom
-                (try-connect admin-url))))
+                (ttu/try-connecting-to-kafka-connect admin-url))))
         connect-result-during (deref connect-result-during-atom)
 
-        connect-result-after (try-connect admin-url)]
+        connect-result-after (ttu/try-connecting-to-kafka-connect admin-url)]
     (is (instance? ConnectionException connect-result-before))
 
     (is (not (instance? ConnectionException connect-result-during)))
