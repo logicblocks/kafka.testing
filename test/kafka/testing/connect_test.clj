@@ -140,7 +140,8 @@
 
 ; TODO: Test offset file deletion. Currently, the offset file isn't created
 ;       until needed so hard to test.
-(deftest with-running-kafka-connect-server-manages-kafka-connect-server-lifecycle
+(deftest
+  with-running-kafka-connect-server-manages-kafka-connect-server-lifecycle
   (let [broker (deref kafka-broker-atom)
         connect-server (tkc/kafka-connect-server
                          :bootstrap-servers (tkb/bootstrap-servers broker))
