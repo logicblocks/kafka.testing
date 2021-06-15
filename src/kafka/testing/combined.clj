@@ -31,27 +31,27 @@
       (let [zookeeper-defaults {:manage true}
             zookeeper-options (merge zookeeper-defaults (:zookeeper options))
             zookeeper (when (:manage zookeeper-options)
-                        (-> (apply tzk/zookeeper-server
-                              (options-vec (dissoc zookeeper-options :manage)))
-                          (tzk/start)))
+                        (tzk/start
+                          (apply tzk/zookeeper-server
+                            (options-vec (dissoc zookeeper-options :manage)))))
             zookeeper-connect-string (tzk/connect-string zookeeper)
 
             kafka-defaults {:manage                   true
                             :zookeeper-connect-string zookeeper-connect-string}
             kafka-options (merge kafka-defaults (:kafka options))
             kafka (when (:manage kafka-options)
-                    (-> (apply tkb/kafka-broker
-                          (options-vec (dissoc kafka-options :manage)))
-                      (tkb/start)))
+                    (tkb/start
+                      (apply tkb/kafka-broker
+                        (options-vec (dissoc kafka-options :manage)))))
             kafka-bootstrap-servers (tkb/bootstrap-servers kafka)
 
             connect-defaults {:manage            true
                               :bootstrap-servers kafka-bootstrap-servers}
             connect-options (merge connect-defaults (:kafka-connect options))
             connect (when (:manage connect-options)
-                      (-> (apply tkc/kafka-connect-server
-                            (options-vec (dissoc connect-options :manage)))
-                        (tkc/start)))]
+                      (tkc/start
+                        (apply tkc/kafka-connect-server
+                          (options-vec (dissoc connect-options :manage)))))]
         (reset! kafka-atom
           {::instances {::zookeeper     zookeeper
                         ::kafka         kafka

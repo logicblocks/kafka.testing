@@ -151,7 +151,8 @@
 
 (defn stop [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (let [^Connect connect (get-in kafka-connect-server [::instances ::connect])]
+    (let [^Connect connect
+          (get-in kafka-connect-server [::instances ::connect])]
       (.stop connect)
       (.awaitStop connect)))
   kafka-connect-server)
