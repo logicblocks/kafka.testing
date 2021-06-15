@@ -1,1 +1,0 @@
-(ns kafka.testing.core)
