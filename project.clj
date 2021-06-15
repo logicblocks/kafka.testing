@@ -1,4 +1,4 @@
-(defproject io.logicblocks/kafka.testing "0.0.1"
+(defproject io.logicblocks/kafka.testing "0.0.2-RC1"
   :description "A Clojure library to help with tests involving Kafka."
   :url "https://github.com/logicblocks/kafka.testing"
 
