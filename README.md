@@ -11,7 +11,7 @@ A Clojure library to help with tests involving Kafka.
 Add the following to your `project.clj` file:
 
 ```clj
-[io.logicblocks/kafka.testing "0.0.1"]
+[io.logicblocks/kafka.testing "0.0.2"]
 ```
 
 ## Documentation
