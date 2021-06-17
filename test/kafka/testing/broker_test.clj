@@ -46,7 +46,7 @@
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
                  :zookeeper.connect (tzk/connect-string zookeeper))]
-    (is (not (= "/tmp/kafka-logs" (tkb/log-directory broker))))))
+    (is (not (= "/tmp/kafka-logs" (tkb/log-dir broker))))))
 
 (deftest kafka-broker-uses-the-specified-log-directory
   (let [zookeeper (deref zookeeper-atom)
@@ -54,7 +54,19 @@
         broker (tkb/kafka-broker
                  :log.dir log-directory
                  :zookeeper.connect (tzk/connect-string zookeeper))]
-    (is (= log-directory (tkb/log-directory broker)))))
+    (is (= log-directory (tkb/log-dir broker)))))
+
+(deftest kafka-broker-uses-an-offsets-topic-replication-factor-of-1
+  (let [zookeeper (deref zookeeper-atom)
+        broker (tkb/kafka-broker
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
+    (is (= 1 (tkb/offsets-topic-replication-factor broker)))))
+
+(deftest kafka-broker-uses-a-transaction-topic-replication-factor-of-1
+  (let [zookeeper (deref zookeeper-atom)
+        broker (tkb/kafka-broker
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
+    (is (= 1 (tkb/transaction-topic-replication-factor broker)))))
 
 (deftest kafka-broker-does-not-start-the-broker
   (let [zookeeper (deref zookeeper-atom)
@@ -70,7 +82,7 @@
                  :zookeeper.connect (tzk/connect-string zookeeper))
         broker (tkb/start broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
-        log-directory (tkb/log-directory broker)
+        log-directory (tkb/log-dir broker)
         connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (true? (ttu/path-exists? log-directory)))
     (is (not (instance? TimeoutException connect-result)))))
@@ -82,7 +94,7 @@
         broker (tkb/start broker)
         broker (tkb/stop broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
-        log-directory (tkb/log-directory broker)
+        log-directory (tkb/log-dir broker)
         connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (false? (ttu/path-exists? log-directory)))
     (is (instance? TimeoutException connect-result))))
@@ -123,7 +135,7 @@
         broker-atom (atom broker)
         lifecycle-fn (tkb/with-running-kafka-broker broker-atom)
         bootstrap-servers (tkb/bootstrap-servers broker)
-        log-directory (tkb/log-directory broker)
+        log-directory (tkb/log-dir broker)
 
         connect-result-before
         (ttu/try-connecting-to-kafka-broker bootstrap-servers)

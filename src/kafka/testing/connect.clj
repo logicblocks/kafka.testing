@@ -29,13 +29,6 @@
            (get-in ~kafka-connect-server [::config]))
      ~@body))
 
-(def rest-host-name-key "rest.host.name")
-(def rest-port-key "rest.port")
-(def bootstrap-servers-key "bootstrap.servers")
-(def key-converter-key "key.converter")
-(def value-converter-key "value.converter")
-(def offset-storage-file-filename-key "offset.storage.file.filename")
-
 (def json-converter-classname "org.apache.kafka.connect.json.JsonConverter")
 
 (defn- option-defaults []
@@ -51,15 +44,20 @@
      :value.converter              value-converter
      :offset.storage.file.filename offset-storage-file-filename}))
 
-(defn- config-map [options]
-  (let [options (merge (option-defaults) options)]
-    (w/stringify-keys options)))
+(defn defaulted-options [options]
+  (merge (option-defaults) options))
+
+(defn- string-keyed-config-map [options]
+  (w/stringify-keys options))
+
+(defn- keyword-keyed-config-map [options]
+  (w/keywordize-keys options))
 
 (defn- worker-config [config-map]
   (StandaloneConfig. config-map))
 
 (defn- worker-id [config-map]
-  (str (UUID/randomUUID) (get config-map rest-port-key)))
+  (str (UUID/randomUUID) (get config-map :rest.port)))
 
 (defn- kafka-cluster-id [config-map]
   (ConnectUtils/lookupKafkaClusterId (worker-config config-map)))
@@ -95,7 +93,8 @@
   (Connect. herder rest-server))
 
 (defn kafka-connect-server [& {:as options}]
-  (let [config-map (config-map options)
+  (let [options (defaulted-options options)
+        config-map (string-keyed-config-map options)
         rest-server (rest-server config-map)
         plugins (plugins config-map)
         worker (worker config-map plugins)
@@ -106,26 +105,30 @@
                   ::plugins     plugins
                   ::worker      worker
                   ::herder      herder}
-     ::config    config-map}))
+     ::config    (keyword-keyed-config-map options)}))
+
+(defn configuration [kafka-connect-server]
+  (do-if-instance kafka-connect-server
+    (::config kafka-connect-server)))
 
 (defn rest-host-name [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (get-in kafka-connect-server [::config rest-host-name-key])))
+    (get-in kafka-connect-server [::config :rest.host.name])))
 
 (defn rest-port [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (get-in kafka-connect-server [::config rest-port-key])))
+    (get-in kafka-connect-server [::config :rest.port])))
 
 (defn admin-url [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (let [config (::config kafka-connect-server)
-          hostname (get config rest-host-name-key)
-          port (get config rest-port-key)]
+          hostname (get config :rest.host.name)
+          port (get config :rest.port)]
       (str "http://" hostname ":" port "/"))))
 
 (defn offset-storage-file-filename [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (get-in kafka-connect-server [::config offset-storage-file-filename-key])))
+    (get-in kafka-connect-server [::config :offset.storage.file.filename])))
 
 (defn start [kafka-connect-server]
   (do-if-instance kafka-connect-server
