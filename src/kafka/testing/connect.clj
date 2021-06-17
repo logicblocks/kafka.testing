@@ -1,5 +1,7 @@
 (ns kafka.testing.connect
   (:require
+   [clojure.walk :as w]
+
    [kafka.testing.utils :as tu]
    [kafka.testing.broker :as tkb])
   (:import
@@ -36,14 +38,6 @@
 
 (def json-converter-classname "org.apache.kafka.connect.json.JsonConverter")
 
-(def ^:private option-config-keys
-  {:hostname            rest-host-name-key
-   :port                rest-port-key
-   :bootstrap-servers   bootstrap-servers-key
-   :key-converter       key-converter-key
-   :value-converter     value-converter-key
-   :offset-storage-file offset-storage-file-filename-key})
-
 (defn- option-defaults []
   (let [hostname "localhost"
         port (tu/free-port!)
@@ -51,21 +45,15 @@
         value-converter json-converter-classname
         offset-storage-file-filename
         (str (tu/temporary-directory!) File/separator "offsets")]
-    {:hostname            hostname
-     :port                port
-     :key-converter       key-converter
-     :value-converter     value-converter
-     :offset-storage-file offset-storage-file-filename}))
+    {:rest.host.name               hostname
+     :rest.port                    port
+     :key.converter                key-converter
+     :value.converter              value-converter
+     :offset.storage.file.filename offset-storage-file-filename}))
 
 (defn- config-map [options]
   (let [options (merge (option-defaults) options)]
-    (reduce
-      (fn [config-map [key value]]
-        (assoc (dissoc config-map key)
-          (get option-config-keys key key)
-          value))
-      options
-      options)))
+    (w/stringify-keys options)))
 
 (defn- worker-config [config-map]
   (StandaloneConfig. config-map))
@@ -120,11 +108,11 @@
                   ::herder      herder}
      ::config    config-map}))
 
-(defn hostname [kafka-connect-server]
+(defn rest-host-name [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (get-in kafka-connect-server [::config rest-host-name-key])))
 
-(defn port [kafka-connect-server]
+(defn rest-port [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (get-in kafka-connect-server [::config rest-port-key])))
 
@@ -135,7 +123,7 @@
           port (get config rest-port-key)]
       (str "http://" hostname ":" port "/"))))
 
-(defn offset-storage-file [kafka-connect-server]
+(defn offset-storage-file-filename [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (get-in kafka-connect-server [::config offset-storage-file-filename-key])))
 
@@ -164,8 +152,7 @@
       (reset! kafka-connect-server-atom
         (apply kafka-connect-server
           (concat
-            [:bootstrap-servers
-             (tkb/bootstrap-servers @kafka-broker-atom)]
+            [:bootstrap.servers (tkb/bootstrap-servers @kafka-broker-atom)]
             options)))
       (run-tests)
       (finally

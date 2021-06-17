@@ -21,59 +21,60 @@
   (tkb/with-fresh-kafka-broker kafka-broker-atom zookeeper-atom)
   (tkb/with-running-kafka-broker kafka-broker-atom))
 
-(deftest kafka-connect-server-uses-a-random-port
+(deftest kafka-connect-server-uses-a-random-rest-port
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)]
-    (is (not (= 2181 (tkc/port kafka-connect-server))))))
+                               :bootstrap.servers bootstrap-servers)]
+    (is (not (= 2181 (tkc/rest-port kafka-connect-server))))))
 
-(deftest kafka-connect-server-uses-the-specified-port
+(deftest kafka-connect-server-uses-the-specified-rest-port
   (let [port (tu/free-port!)
         kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :port port
-                               :bootstrap-servers bootstrap-servers)]
-    (is (= port (tkc/port kafka-connect-server)))))
+                               :rest.port port
+                               :bootstrap.servers bootstrap-servers)]
+    (is (= port (tkc/rest-port kafka-connect-server)))))
 
-(deftest kafka-connect-server-uses-localhost-as-hostname
+(deftest kafka-connect-server-uses-localhost-as-rest-hostname
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)]
-    (is (= "localhost" (tkc/hostname kafka-connect-server)))))
+                               :bootstrap.servers bootstrap-servers)]
+    (is (= "localhost" (tkc/rest-host-name kafka-connect-server)))))
 
-(deftest kafka-connect-server-uses-the-specified-hostname
+(deftest kafka-connect-server-uses-the-specified-rest-hostname
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :hostname "kafka-connect.local"
-                               :bootstrap-servers bootstrap-servers)]
-    (is (= "kafka-connect.local" (tkc/hostname kafka-connect-server)))))
+                               :rest.host.name "kafka-connect.local"
+                               :bootstrap.servers bootstrap-servers)]
+    (is (= "kafka-connect.local" (tkc/rest-host-name kafka-connect-server)))))
 
 (deftest kafka-connect-server-uses-a-temporary-offset-storage-file
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)]
-    (is (not (= "" (tkc/offset-storage-file kafka-connect-server))))))
+                               :bootstrap.servers bootstrap-servers)]
+    (is (not (= "" (tkc/offset-storage-file-filename kafka-connect-server))))))
 
 (deftest kafka-connect-server-uses-the-specified-offset-storage-directory
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         offset-storage-file (str (tu/temporary-directory!) "/offset-storage")
-        kafka-connect-server (tkc/kafka-connect-server
-                               :offset-storage-file offset-storage-file
-                               :bootstrap-servers bootstrap-servers)]
+        kafka-connect-server
+        (tkc/kafka-connect-server
+          :offset.storage.file.filename offset-storage-file
+          :bootstrap.servers bootstrap-servers)]
     (is (= offset-storage-file
-          (tkc/offset-storage-file kafka-connect-server)))))
+          (tkc/offset-storage-file-filename kafka-connect-server)))))
 
 (deftest kafka-connect-server-does-not-start-the-server
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)
+                               :bootstrap.servers bootstrap-servers)
         admin-url (tkc/admin-url kafka-connect-server)
         connect-result (ttu/try-connecting-to-kafka-connect admin-url)]
     (is (instance? ConnectionException connect-result))))
@@ -82,7 +83,7 @@
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)
+                               :bootstrap.servers bootstrap-servers)
         kafka-connect-server (tkc/start kafka-connect-server)
         admin-url (tkc/admin-url kafka-connect-server)
         connect-result (ttu/try-connecting-to-kafka-connect admin-url)]
@@ -92,7 +93,7 @@
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :bootstrap-servers bootstrap-servers)
+                               :bootstrap.servers bootstrap-servers)
         kafka-connect-server (tkc/start kafka-connect-server)
         kafka-connect-server (tkc/stop kafka-connect-server)
         admin-url (tkc/admin-url kafka-connect-server)
@@ -134,7 +135,7 @@
   with-running-kafka-connect-server-manages-kafka-connect-server-lifecycle
   (let [broker (deref kafka-broker-atom)
         connect-server (tkc/kafka-connect-server
-                         :bootstrap-servers (tkb/bootstrap-servers broker))
+                         :bootstrap.servers (tkb/bootstrap-servers broker))
         connect-server-atom (atom connect-server)
 
         lifecycle-fn (tkc/with-running-kafka-connect-server

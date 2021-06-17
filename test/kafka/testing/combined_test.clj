@@ -86,7 +86,7 @@
   (let [kafka-atom (atom nil)
         kafka-connect-port (tu/free-port!)
         instantiation-fn (tc/with-kafka kafka-atom
-                           :kafka-connect {:port kafka-connect-port})
+                           :kafka-connect {:rest.port kafka-connect-port})
         called (atom false)]
     (instantiation-fn
       (fn []
@@ -101,7 +101,7 @@
               (ttu/try-connecting-to-kafka-connect
                 (tc/kafka-connect-admin-url kafka))]
           (reset! called true)
-          (is (= kafka-connect-port (tkc/port (tc/kafka-connect kafka))))
+          (is (= kafka-connect-port (tkc/rest-port (tc/kafka-connect kafka))))
           (is (not (instance? Exception zookeeper-connect-result)))
           (is (not (instance? Exception kafka-broker-connect-result)))
           (is (not (instance? Exception kafka-connect-connect-result))))))
@@ -117,7 +117,7 @@
             instantiation-fn
             (tc/with-kafka kafka-atom
               :zookeeper {:manage false}
-              :kafka {:zookeeper-connect-string zookeeper-connect-string})
+              :kafka {:zookeeper.connect zookeeper-connect-string})
 
             called (atom false)]
         (instantiation-fn
@@ -132,7 +132,7 @@
 (deftest with-kafka-does-not-include-kafka-when-manage-false
   (let [zookeeper (tzk/zookeeper-server)
         kafka (tkb/kafka-broker
-                :zookeeper-connect-string (tzk/connect-string zookeeper))]
+                :zookeeper.connect (tzk/connect-string zookeeper))]
     (try
       (tzk/start zookeeper)
       (let [kafka (tkb/start kafka)
@@ -142,7 +142,7 @@
             instantiation-fn
             (tc/with-kafka kafka-atom
               :kafka {:manage false}
-              :kafka-connect {:bootstrap-servers kafka-bootstrap-servers})
+              :kafka-connect {:bootstrap.servers kafka-bootstrap-servers})
 
             called (atom false)]
         (instantiation-fn

@@ -19,47 +19,47 @@
 (deftest kafka-broker-uses-a-random-port
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (not (= 9092 (tkb/port broker))))))
 
 (deftest kafka-broker-uses-the-specified-port
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
                  :port 14326
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (= 14326 (tkb/port broker)))))
 
-(deftest kafka-broker-uses-localhost-as-hostname
+(deftest kafka-broker-uses-localhost-as-host-name
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
-    (is (= "localhost" (tkb/hostname broker)))))
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
+    (is (= "localhost" (tkb/host-name broker)))))
 
-(deftest kafka-broker-uses-the-specified-hostname
+(deftest kafka-broker-uses-the-specified-host-name
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :hostname "kafka.local"
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
-    (is (= "kafka.local" (tkb/hostname broker)))))
+                 :host.name "kafka.local"
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
+    (is (= "kafka.local" (tkb/host-name broker)))))
 
 (deftest kafka-broker-uses-a-temporary-log-directory
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (not (= "/tmp/kafka-logs" (tkb/log-directory broker))))))
 
 (deftest kafka-broker-uses-the-specified-log-directory
   (let [zookeeper (deref zookeeper-atom)
         log-directory (tu/temporary-directory!)
         broker (tkb/kafka-broker
-                 :log-directory log-directory
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))]
+                 :log.dir log-directory
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (= log-directory (tkb/log-directory broker)))))
 
 (deftest kafka-broker-does-not-start-the-broker
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))
+                 :zookeeper.connect (tzk/connect-string zookeeper))
         bootstrap-servers (tkb/bootstrap-servers broker)
         connect-result (ttu/try-connecting-to-kafka-broker bootstrap-servers)]
     (is (instance? TimeoutException connect-result))))
@@ -67,7 +67,7 @@
 (deftest start-starts-the-provided-kafka-broker
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))
+                 :zookeeper.connect (tzk/connect-string zookeeper))
         broker (tkb/start broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
         log-directory (tkb/log-directory broker)
@@ -78,7 +78,7 @@
 (deftest stop-stops-the-provided-kafka-broker
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))
+                 :zookeeper.connect (tzk/connect-string zookeeper))
         broker (tkb/start broker)
         broker (tkb/stop broker)
         bootstrap-servers (tkb/bootstrap-servers broker)
@@ -119,7 +119,7 @@
 (deftest with-running-kafka-broker-manages-kafka-broker-lifecycle
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :zookeeper-connect-string (tzk/connect-string zookeeper))
+                 :zookeeper.connect (tzk/connect-string zookeeper))
         broker-atom (atom broker)
         lifecycle-fn (tkb/with-running-kafka-broker broker-atom)
         bootstrap-servers (tkb/bootstrap-servers broker)

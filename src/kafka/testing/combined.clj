@@ -37,7 +37,7 @@
             zookeeper-connect-string (tzk/connect-string zookeeper)
 
             kafka-defaults {:manage                   true
-                            :zookeeper-connect-string zookeeper-connect-string}
+                            :zookeeper.connect zookeeper-connect-string}
             kafka-options (merge kafka-defaults (:kafka options))
             kafka (when (:manage kafka-options)
                     (tkb/start
@@ -46,7 +46,7 @@
             kafka-bootstrap-servers (tkb/bootstrap-servers kafka)
 
             connect-defaults {:manage            true
-                              :bootstrap-servers kafka-bootstrap-servers}
+                              :bootstrap.servers kafka-bootstrap-servers}
             connect-options (merge connect-defaults (:kafka-connect options))
             connect (when (:manage connect-options)
                       (tkc/start

@@ -1,5 +1,7 @@
 (ns kafka.testing.broker
   (:require
+   [clojure.walk :as w]
+
    [kafka.testing.utils :as tu]
    [kafka.testing.zookeeper :as tzk])
   (:import
@@ -11,25 +13,14 @@
   `(when (and ~kafka-broker (::instance ~kafka-broker))
      ~@body))
 
-(def ^:private option-config-keys
-  {:hostname                 "host.name"
-   :log-directory            "log.dirs"
-   :zookeeper-connect-string "zookeeper.connect"})
-
 (defn- ^:private option-defaults []
-  {:hostname      "localhost"
-   :port          (tu/free-port!)
-   :log-directory (tu/temporary-directory!)})
+  {:host.name "localhost"
+   :port      (tu/free-port!)
+   :log.dir   (tu/temporary-directory!)})
 
 (defn- config-map [options]
   (let [options (merge (option-defaults) options)]
-    (reduce
-      (fn [config-map [key value]]
-        (assoc (dissoc config-map key)
-          (get option-config-keys key key)
-          value))
-      options
-      options)))
+    (w/stringify-keys options)))
 
 (defn- kafka-config [config-map]
   (KafkaConfig/fromProps
@@ -45,7 +36,7 @@
     {::instance instance
      ::config   config-map}))
 
-(defn hostname [kafka-broker]
+(defn host-name [kafka-broker]
   (do-if-instance kafka-broker
     (-> (::instance kafka-broker)
       (.config)
@@ -66,7 +57,7 @@
 
 (defn bootstrap-servers [kafka-broker]
   (do-if-instance kafka-broker
-    (str (hostname kafka-broker) ":" (port kafka-broker))))
+    (str (host-name kafka-broker) ":" (port kafka-broker))))
 
 (defn start [kafka-broker]
   (do-if-instance kafka-broker
@@ -86,8 +77,7 @@
       (reset! kafka-broker-atom
         (apply kafka-broker
           (concat
-            [:zookeeper-connect-string
-             (tzk/connect-string @zookeeper-atom)]
+            [:zookeeper.connect (tzk/connect-string @zookeeper-atom)]
             options)))
       (run-tests)
       (finally
