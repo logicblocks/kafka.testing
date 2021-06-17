@@ -9,6 +9,7 @@
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]
+            [lein-cprint "1.3.3"]
             [lein-eftest "0.5.9"]
             [lein-codox "0.10.7"]
             [lein-cljfmt "0.6.7"]
@@ -36,11 +37,10 @@
                      [zookeeper-clj "0.9.4"]
                      [fundingcircle/jackdaw "0.6.0"]
                      [org.sourcelab/kafka-connect-client "3.1.1"]]
-    :resource-paths ["test_resources"]
-    :aot            :all}
+    :aot            :all
+    :resource-paths ["test-resources"]}
    :dev
-   [:shared {:source-paths ["dev"]
-             :eftest       {:multithread? false}}]
+   [:shared {:eftest {:multithread? false}}]
    :test
    [:shared {:eftest {:multithread? false}}]
    :prerelease
@@ -69,6 +69,8 @@
      ["vcs" "commit" "Pre-release version %s [skip ci]"]
      ["vcs" "tag"]
      ["vcs" "push"]]}}
+
+  :target-path "target/%s/"
 
   :cloverage
   {:ns-exclude-regex [#"^user"]}
