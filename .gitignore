@@ -10,6 +10,7 @@ pom.xml.asc
 /.nrepl-port
 /run
 .hgignore
+.bundle
 .hg/
 *.iml
 *.iws
