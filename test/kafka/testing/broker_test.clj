@@ -22,23 +22,23 @@
                  :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (not (= 9092 (tkb/port broker))))))
 
-(deftest kafka-broker-uses-the-specified-port
-  (let [zookeeper (deref zookeeper-atom)
-        broker (tkb/kafka-broker
-                 :port 14326
-                 :zookeeper.connect (tzk/connect-string zookeeper))]
-    (is (= 14326 (tkb/port broker)))))
-
 (deftest kafka-broker-uses-localhost-as-host-name
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
                  :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (= "localhost" (tkb/host-name broker)))))
 
+(deftest kafka-broker-uses-the-specified-port
+  (let [zookeeper (deref zookeeper-atom)
+        broker (tkb/kafka-broker
+                 :listeners "PLAINTEXT://localhost:14326"
+                 :zookeeper.connect (tzk/connect-string zookeeper))]
+    (is (= 14326 (tkb/port broker)))))
+
 (deftest kafka-broker-uses-the-specified-host-name
   (let [zookeeper (deref zookeeper-atom)
         broker (tkb/kafka-broker
-                 :host.name "kafka.local"
+                 :listeners "PLAINTEXT://kafka.local:9092"
                  :zookeeper.connect (tzk/connect-string zookeeper))]
     (is (= "kafka.local" (tkb/host-name broker)))))
 

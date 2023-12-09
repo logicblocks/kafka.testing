@@ -33,7 +33,7 @@
         kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
         kafka-connect-server (tkc/kafka-connect-server
-                               :rest.port port
+                               :listeners (str "HTTP://localhost:" port)
                                :bootstrap.servers bootstrap-servers)]
     (is (= port (tkc/rest-port kafka-connect-server)))))
 
@@ -47,9 +47,10 @@
 (deftest kafka-connect-server-uses-the-specified-rest-hostname
   (let [kafka-broker (deref kafka-broker-atom)
         bootstrap-servers (tkb/bootstrap-servers kafka-broker)
-        kafka-connect-server (tkc/kafka-connect-server
-                               :rest.host.name "kafka-connect.local"
-                               :bootstrap.servers bootstrap-servers)]
+        kafka-connect-server
+        (tkc/kafka-connect-server
+          :listeners (str "HTTP://kafka-connect.local:2181")
+          :bootstrap.servers bootstrap-servers)]
     (is (= "kafka-connect.local" (tkc/rest-host-name kafka-connect-server)))))
 
 (deftest kafka-connect-server-uses-a-temporary-offset-storage-file

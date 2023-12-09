@@ -1,15 +1,17 @@
 (ns kafka.testing.connect
   (:require
+   [clojure.string :as string]
    [clojure.walk :as w]
 
    [kafka.testing.utils :as tu]
    [kafka.testing.broker :as tkb])
   (:import
+   [org.apache.kafka.connect.json JsonConverter JsonConverterConfig]
    [org.apache.kafka.connect.runtime
     Connect
-    Worker]
+    Worker WorkerConfig]
    [org.apache.kafka.connect.runtime.isolation Plugins]
-   [org.apache.kafka.connect.runtime.rest RestServer]
+   [org.apache.kafka.connect.runtime.rest ConnectRestServer RestClient]
    [org.apache.kafka.connect.runtime.standalone
     StandaloneHerder
     StandaloneConfig]
@@ -18,8 +20,7 @@
     NoneConnectorClientConfigOverridePolicy]
    [org.apache.kafka.connect.storage FileOffsetBackingStore]
    [java.io File]
-   [java.util UUID]
-   [org.apache.kafka.connect.util ConnectUtils]))
+   [java.util UUID]))
 
 (defmacro ^:private do-if-instance [kafka-connect-server & body]
   `(when (and ~kafka-connect-server
@@ -38,8 +39,7 @@
         value-converter json-converter-classname
         offset-storage-file-filename
         (str (tu/temporary-directory!) File/separator "offsets")]
-    {:rest.host.name               hostname
-     :rest.port                    port
+    {:listeners                    (str "HTTP://" hostname ":" port)
      :key.converter                key-converter
      :value.converter              value-converter
      :offset.storage.file.filename offset-storage-file-filename}))
@@ -59,48 +59,61 @@
 (defn- worker-id [config-map]
   (str (UUID/randomUUID) (get config-map :rest.port)))
 
-(defn- kafka-cluster-id [config-map]
-  (ConnectUtils/lookupKafkaClusterId (worker-config config-map)))
+(defn- kafka-cluster-id [^WorkerConfig config]
+  (.kafkaClusterId config))
 
-(defn- rest-server [config-map]
-  (RestServer. (worker-config config-map)))
+(defn- rest-client [config]
+  (RestClient. config))
+
+(defn- rest-server [rest-client config-map]
+  (ConnectRestServer. nil rest-client config-map))
 
 (defn- plugins [config-map]
   (Plugins. config-map))
 
-(defn- offset-backing-store [_]
-  (FileOffsetBackingStore.))
+(defn- offset-backing-store [^Plugins plugins ^WorkerConfig config]
+  (let [converter
+        (.newInternalConverter plugins
+          true
+          (.getName JsonConverter)
+          {JsonConverterConfig/SCHEMAS_ENABLE_CONFIG "false"})
+        store (FileOffsetBackingStore. converter)]
+    (.configure store config)
+    store))
 
-(defn- connector-client-config-override-policy [_]
+(defn- connector-client-config-override-policy []
   (NoneConnectorClientConfigOverridePolicy.))
 
-(defn- worker [config-map plugins]
+(defn- worker [plugins config config-map]
   (Worker.
     (worker-id config-map)
     Time/SYSTEM
     plugins
-    (worker-config config-map)
-    (offset-backing-store config-map)
-    (connector-client-config-override-policy config-map)))
+    config
+    (offset-backing-store plugins config)
+    (connector-client-config-override-policy)))
 
-(defn- herder [config-map worker]
+(defn- herder [worker config]
   (StandaloneHerder.
     worker
-    (kafka-cluster-id config-map)
-    (connector-client-config-override-policy config-map)))
+    (kafka-cluster-id config)
+    (connector-client-config-override-policy)))
 
-(defn- connect [_ herder rest-server]
+(defn- connect [herder rest-server]
   (Connect. herder rest-server))
 
 (defn kafka-connect-server [& {:as options}]
   (let [options (defaulted-options options)
         config-map (string-keyed-config-map options)
-        rest-server (rest-server config-map)
+        config (worker-config config-map)
+        rest-client (rest-client config)
+        rest-server (rest-server rest-client config-map)
         plugins (plugins config-map)
-        worker (worker config-map plugins)
-        herder (herder config-map worker)
-        connect (connect config-map herder rest-server)]
+        worker (worker plugins config config-map)
+        herder (herder worker config)
+        connect (connect herder rest-server)]
     {::instances {::connect     connect
+                  ::rest-client rest-client
                   ::rest-server rest-server
                   ::plugins     plugins
                   ::worker      worker
@@ -113,18 +126,28 @@
 
 (defn rest-host-name [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (get-in kafka-connect-server [::config :rest.host.name])))
+    (let [config (::config kafka-connect-server)
+          listeners (get config :listeners)
+          listener (first (string/split listeners #","))
+          listener (string/replace listener "HTTP://" "")
+          host-name (first (string/split listener #":"))]
+      host-name)))
 
 (defn rest-port [kafka-connect-server]
   (do-if-instance kafka-connect-server
-    (get-in kafka-connect-server [::config :rest.port])))
+    (let [config (::config kafka-connect-server)
+          listeners (get config :listeners)
+          listener (first (string/split listeners #","))
+          listener (string/replace listener "HTTP://" "")
+          port (second (string/split listener #":"))]
+      (Integer/parseInt port))))
 
 (defn admin-url [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (let [config (::config kafka-connect-server)
-          hostname (get config :rest.host.name)
-          port (get config :rest.port)]
-      (str "http://" hostname ":" port "/"))))
+          listeners (get config :listeners)
+          listener (first (string/split listeners #","))]
+      (string/lower-case listener))))
 
 (defn offset-storage-file-filename [kafka-connect-server]
   (do-if-instance kafka-connect-server
@@ -133,10 +156,13 @@
 (defn start [kafka-connect-server]
   (do-if-instance kafka-connect-server
     (.compareAndSwapWithDelegatingLoader
+      ^Plugins
       (get-in kafka-connect-server [::instances ::plugins]))
     (.initializeServer
+      ^ConnectRestServer
       (get-in kafka-connect-server [::instances ::rest-server]))
     (.start
+      ^Connect
       (get-in kafka-connect-server [::instances ::connect])))
   kafka-connect-server)
 

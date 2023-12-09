@@ -13,25 +13,25 @@
 
 (defn start [zookeeper]
   (do-if-instance zookeeper
-    (.start (::instance zookeeper)))
+    (.start ^TestingServer (::instance zookeeper)))
   zookeeper)
 
 (defn stop [zookeeper]
   (do-if-instance zookeeper
-    (.close (::instance zookeeper)))
+    (.close ^TestingServer (::instance zookeeper)))
   zookeeper)
 
 (defn port [zookeeper]
   (do-if-instance zookeeper
-    (.getPort (::instance zookeeper))))
+    (.getPort ^TestingServer (::instance zookeeper))))
 
 (defn connect-string [zookeeper]
   (do-if-instance zookeeper
-    (.getConnectString (::instance zookeeper))))
+    (.getConnectString ^TestingServer (::instance zookeeper))))
 
 (defn data-directory [zookeeper]
   (do-if-instance zookeeper
-    (.getTempDirectory (::instance zookeeper))))
+    (.getTempDirectory ^TestingServer (::instance zookeeper))))
 
 (defn with-fresh-zookeeper [zookeeper-atom]
   (fn [run-tests]

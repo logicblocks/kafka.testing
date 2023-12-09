@@ -5,44 +5,48 @@
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
 
-  :plugins [[lein-cloverage "1.1.2"]
+  :plugins [[lein-cloverage "1.2.4"]
             [lein-shell "0.5.0"]
-            [lein-ancient "0.6.15"]
+            [lein-ancient "0.7.0"]
             [lein-changelog "0.3.2"]
             [lein-cprint "1.3.3"]
-            [lein-eftest "0.5.9"]
-            [lein-codox "0.10.7"]
-            [lein-cljfmt "0.6.7"]
+            [lein-eftest "0.6.0"]
+            [lein-codox "0.10.8"]
+            [lein-cljfmt "0.9.2"]
             [lein-kibit "0.1.8"]
             [lein-bikeshed "0.5.2"]
-            [jonase/eastwood "0.3.11"]]
+            [jonase/eastwood "1.4.0"]]
 
-  :dependencies [[org.apache.curator/curator-test "5.1.0"]
-                 [org.apache.kafka/kafka_2.13 "2.8.0"]
-                 [org.apache.kafka/connect-runtime "2.8.0"
-                  :exclusions [org.slf4j/slf4j-log4j12]]]
+  :dependencies [[org.apache.curator/curator-test "5.5.0"]
+                 [org.apache.kafka/kafka_2.13 "3.6.1"]
+                 [org.apache.kafka/connect-runtime "3.6.1"]]
 
   :profiles
   {:shared
-   {:dependencies   [[org.clojure/clojure "1.10.3"]
+   {:dependencies   [[org.clojure/clojure "1.11.1"]
 
-                     [org.slf4j/jcl-over-slf4j "1.7.30"]
-                     [org.slf4j/jul-to-slf4j "1.7.30"]
-                     [org.slf4j/log4j-over-slf4j "1.7.30"]
+                     [org.slf4j/jcl-over-slf4j "1.7.36"]
+                     [org.slf4j/jul-to-slf4j "1.7.36"]
+                     [org.slf4j/log4j-over-slf4j "1.7.36"]
                      [ch.qos.logback/logback-classic "1.2.3"]
 
-                     [nrepl "0.8.3"]
-                     [eftest "0.5.9"]
+                     [nrepl "1.1.0"]
+                     [eftest "0.6.0"]
 
-                     [zookeeper-clj "0.9.4"]
-                     [fundingcircle/jackdaw "0.6.0"]
-                     [org.sourcelab/kafka-connect-client "3.1.1"]]
+                     [zookeeper-clj "0.10.0"]
+                     [org.sourcelab/kafka-connect-client "4.0.3"]
+
+                     [fundingcircle/jackdaw "0.9.12"]
+                     [org.apache.kafka/kafka-streams "3.5.1"]
+                     [org.apache.kafka/kafka-streams-test-utils "3.5.1"]]
     :aot            :all
     :resource-paths ["test-resources"]}
    :dev
    [:shared {:eftest {:multithread? false}}]
+
    :test
    [:shared {:eftest {:multithread? false}}]
+
    :prerelease
    {:release-tasks
     [["shell" "git" "diff" "--exit-code"]
@@ -51,6 +55,7 @@
      ["vcs" "commit" "Pre-release version %s [skip ci]"]
      ["vcs" "tag"]
      ["deploy"]]}
+
    :release
    {:release-tasks
     [["shell" "git" "diff" "--exit-code"]

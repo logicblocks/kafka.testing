@@ -61,7 +61,8 @@
   (let [kafka-atom (atom nil)
         kafka-port (tu/free-port!)
         instantiation-fn (tc/with-kafka kafka-atom
-                           :kafka {:port kafka-port})
+                           :kafka {:listeners
+                                   (str "PLAINTEXT://localhost:" kafka-port)})
         called (atom false)]
     (instantiation-fn
       (fn []
@@ -86,7 +87,9 @@
   (let [kafka-atom (atom nil)
         kafka-connect-port (tu/free-port!)
         instantiation-fn (tc/with-kafka kafka-atom
-                           :kafka-connect {:rest.port kafka-connect-port})
+                           :kafka-connect
+                           {:listeners
+                            (str "HTTP://localhost:" kafka-connect-port)})
         called (atom false)]
     (instantiation-fn
       (fn []

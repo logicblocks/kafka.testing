@@ -5,6 +5,7 @@
    [kafka.testing.utils :as tu]
    [kafka.testing.zookeeper :as tzk])
   (:import
+   [kafka.cluster EndPoint]
    [kafka.server KafkaConfig KafkaServer]
    [org.apache.kafka.common.utils Time]
    [scala Option]))
@@ -14,11 +15,17 @@
      ~@body))
 
 (defn- ^:private option-defaults []
-  {:host.name                                "localhost"
-   :port                                     (tu/free-port!)
-   :log.dir                                  (tu/temporary-directory!)
-   :offsets.topic.replication.factor         1
-   :transaction.state.log.replication.factor 1})
+  {:listeners
+   (str "PLAINTEXT://localhost:" (tu/free-port!))
+
+   :log.dir
+   (tu/temporary-directory!)
+
+   :offsets.topic.replication.factor
+   1
+
+   :transaction.state.log.replication.factor
+   1})
 
 (defn defaulted-options [options]
   (merge (option-defaults) options))
@@ -49,33 +56,39 @@
     (::config kafka-broker)))
 
 (defn host-name [kafka-broker]
-  (do-if-instance kafka-broker
-    (-> (::instance kafka-broker)
-      (.config)
-      (.hostName))))
+  (let [endpoint
+        ^EndPoint
+        (-> ^KafkaServer (::instance kafka-broker)
+          (.config)
+          (.effectiveAdvertisedListeners)
+          (.head))]
+    (.host endpoint)))
 
 (defn port [kafka-broker]
-  (do-if-instance kafka-broker
-    (-> (::instance kafka-broker)
-      (.config)
-      (.port))))
+  (let [endpoint
+        ^EndPoint
+        (-> ^KafkaServer (::instance kafka-broker)
+          (.config)
+          (.effectiveAdvertisedListeners)
+          (.head))]
+    (.port endpoint)))
 
 (defn log-dir [kafka-broker]
   (do-if-instance kafka-broker
-    (-> (::instance kafka-broker)
+    (-> ^KafkaServer (::instance kafka-broker)
       (.config)
       (.logDirs)
       (.head))))
 
 (defn offsets-topic-replication-factor [kafka-broker]
   (do-if-instance kafka-broker
-    (-> (::instance kafka-broker)
+    (-> ^KafkaServer (::instance kafka-broker)
       (.config)
       (.offsetsTopicReplicationFactor))))
 
 (defn transaction-topic-replication-factor [kafka-broker]
   (do-if-instance kafka-broker
-    (-> (::instance kafka-broker)
+    (-> ^KafkaServer (::instance kafka-broker)
       (.config)
       (.transactionTopicReplicationFactor))))
 
@@ -85,13 +98,13 @@
 
 (defn start [kafka-broker]
   (do-if-instance kafka-broker
-    (.startup (::instance kafka-broker)))
+    (.startup ^KafkaServer (::instance kafka-broker)))
   kafka-broker)
 
 (defn stop [kafka-broker]
   (do-if-instance kafka-broker
-    (.shutdown (::instance kafka-broker))
-    (.awaitShutdown (::instance kafka-broker))
+    (.shutdown ^KafkaServer (::instance kafka-broker))
+    (.awaitShutdown ^KafkaServer (::instance kafka-broker))
     (tu/delete-directory! (log-dir kafka-broker)))
   kafka-broker)
 
