@@ -22,6 +22,7 @@
                  [org.apache.kafka/connect-runtime "3.6.1"]]
 
   :profiles
+  ^{:pom-scope :test}
   {:shared
    {:dependencies   [[org.clojure/clojure "1.11.1"]
 
@@ -37,8 +38,8 @@
                      [org.sourcelab/kafka-connect-client "4.0.3"]
 
                      [fundingcircle/jackdaw "0.9.12"]
-                     [org.apache.kafka/kafka-streams "3.5.1"]
-                     [org.apache.kafka/kafka-streams-test-utils "3.5.1"]]
+                     [org.apache.kafka/kafka-streams "3.6.1"]
+                     [org.apache.kafka/kafka-streams-test-utils "3.6.1"]]
     :aot            :all
     :resource-paths ["test-resources"]}
    :dev
